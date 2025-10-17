@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Viewport</title>
+  <style>
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f0f0f0;
+      color: #333;
+      text-align: center;
+    }
+    .viewport {
+      background: white;
+      padding: 20px 40px;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      font-size: 1.5rem;
+      line-height: 1.8;
+    }
+    .portrait { color: #0077cc; }
+    .landscape { color: #cc5500; }
+
+    @media screen and (max-width: 768px) {
+        body {
+            background: red;
+        }
+    }
+    @media screen and (max-width: 365px) {
+        body {
+            background: blue;
+        }
+    }
+  </style>
+</head>
+<body>
+  <div class="viewport" id="viewport">
+    Ancho: <span id="width"></span> px <br>
+    Alto: <span id="height"></span> px <br>
+    Orientación: <span id="orientation"></span>
+  </div>
+
+  <script>
+    function updateViewport() {
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      const orientation = width > height ? "Horizontal (Landscape)" : "Vertical (Portrait)";
+      const orientationClass = width > height ? "landscape" : "portrait";
+
+      document.getElementById('width').textContent = width;
+      document.getElementById('height').textContent = height;
+
+      const orientationEl = document.getElementById('orientation');
+      orientationEl.textContent = orientation;
+      orientationEl.className = orientationClass;
+    }
+
+    // Actualizar al cargar y cuando se cambia el tamaño
+    window.addEventListener('load', updateViewport);
+    window.addEventListener('resize', updateViewport);
+  </script>
+</body>
+</html>

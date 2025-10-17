@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panel administrador</title>
+  <link rel="icon" href="images/Icono2.png" type="image/x-icon">
+</head>
+
+<body>
+
+  <h2>Panel de invitados</h2>
+  <button id="loginBtn">Iniciar sesión con Google</button>
+  <button id="logoutBtn" style="display:none;">Cerrar sesión</button>
+  <button id="downloadExcelBtn" style="display:none;">Descargar Excel</button>
+  <button id="downloadSQLBtn" style="display:none;">Descargar SQL</button>
+  <div id="data"></div>
+
+  <!-- Firebase UMD -->
+  <script src="https://www.gstatic.com/firebasejs/12.2.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/12.2.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore-compat.js"></script>
+  <!-- SheetJS para exportar Excel -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCyS14WGVM4XYx9kTO-CGZ8mXg3AspW9JU",
+      authDomain: "proyectrelay.firebaseapp.com",
+      projectId: "proyectrelay",
+      storageBucket: "proyectrelay.appspot.com",
+      messagingSenderId: "512935247942",
+      appId: "1:512935247942:web:d82b24f0d6f782a9f34a47"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    const loginBtn = document.getElementById("loginBtn");
+    const logoutBtn = document.getElementById("logoutBtn");
+    const downloadExcelBtn = document.getElementById("downloadExcelBtn");
+    const downloadSQLBtn = document.getElementById("downloadSQLBtn");
+    const dataDiv = document.getElementById("data");
+
+    let allData = [];
+
+    function renderTable(data) {
+      let html = "<table border='1'><tr><th>Nombre</th><th>Apellido</th><th>Platillo</th><th>Bebida</th><th>Asistencia</th></tr>";
+      data.forEach(d => {
+        html += `<tr>
+          <td>${d.nombre}</td>
+          <td>${d.apellido}</td>
+          <td>${d.platillo}</td>
+          <td>${d.bebida}</td>
+          <td>${d.asistencia}</td>
+        </tr>`;
+      });
+      html += "</table>";
+      dataDiv.innerHTML = html;
+    }
+
+    loginBtn.onclick = async () => {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      try {
+        const result = await auth.signInWithPopup(provider);
+        alert("Bienvenido Ing.Tobon: " + result.user.email);
+        loginBtn.style.display = "none";
+        logoutBtn.style.display = "block";
+        downloadExcelBtn.style.display = "inline-block";
+        downloadSQLBtn.style.display = "inline-block";
+
+        const snapshot = await db.collection("asistentes").get();
+        allData = [];
+        snapshot.forEach(doc => allData.push(doc.data()));
+
+        renderTable(allData);
+      } catch (err) {
+        alert("Ocurrió un error: " + err.message);
+      }
+    };
+
+    logoutBtn.onclick = async () => {
+      await auth.signOut();
+      alert("Sesión cerrada");
+      loginBtn.style.display = "block";
+      logoutBtn.style.display = "none";
+      downloadExcelBtn.style.display = "none";
+      downloadSQLBtn.style.display = "none";
+      dataDiv.innerHTML = "";
+      allData = [];
+    };
+
+    // Descargar Excel
+    downloadExcelBtn.onclick = () => {
+      if (!allData.length) { alert("No hay datos para exportar"); return; }
+
+      const table = document.querySelector("#data table");
+      const headers = Array.from(table.querySelectorAll("th")).map(th => th.textContent);
+
+      const exportData = allData.map(row => {
+        const newRow = {};
+        headers.forEach(h => {
+          const key = h.toLowerCase().replace(/\s+/g, '');
+          newRow[h] = row[key] !== undefined ? row[key] : "";
+        });
+        return newRow;
+      });
+
+      const ws = XLSX.utils.json_to_sheet(exportData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Invitados");
+      XLSX.writeFile(wb, "Invitados.xlsx");
+    };
+
+    // Descargar SQL
+    downloadSQLBtn.onclick = () => {
+      if (!allData.length) { alert("No hay datos para exportar"); return; }
+
+      const tableName = "asistentes";
+      const columns = Object.keys(allData[0]);
+      let sql = `-- Script SQL generado dinámicamente\nCREATE TABLE IF NOT EXISTS ${tableName} (\n`;
+      columns.forEach(col => sql += `  ${col} TEXT,\n`);
+      sql = sql.slice(0, -2) + "\n);\n\n";
+
+      allData.forEach(row => {
+        const values = columns.map(col => `'${(row[col] ?? "").toString().replace(/'/g, "''")}'`).join(", ");
+        sql += `INSERT INTO ${tableName} (${columns.join(", ")}) VALUES (${values});\n`;
+      });
+
+      const blob = new Blob([sql], { type: "text/sql" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "invitados.sql";
+      a.click();
+      URL.revokeObjectURL(url);
+    };
+  </script>
+
+</body>
+</html>
